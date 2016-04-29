@@ -1,9 +1,9 @@
 ---
-title: "Validation of Clicks in TestSearchSatisfaction2 Schema"
+title: "Clicks and Page Visits in TestSearchSatisfaction2 Schema"
 author:
 - Mikhail Popov (Analysis & Report)
 - Erik Bernhardson (Engineering)
-date: "April 27, 2016"
+date: "April 29, 2016"
 output:
   pdf_document:
     fig_caption: yes
@@ -40,29 +40,7 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 \begin{tabular}[t]{l|r}
 \hline
  ~ & \textbf{Proportion of sessions}\\
-\hline
-sessions with valid clicks only & 89.235\%\\
-\hline
-sessions with valid visits only & 16.849\%\\
-\hline
-sessions with valid clicks AND visits & 14.327\%\\
-\hline
-sessions with more valid clicks than valid visits & 78.398\%\\
-\hline
-sessions with more valid visits than valid clicks & 3.371\%\\
-\hline
-sessions with valid clicks AND visits, AND clicks match visits 100\% & 8.971\%\\
-\hline
-sessions with valid clicks AND visits, AND clicks don't match visits at all & 0.756\%\\
-\hline
-sessions with clicks but not valid clicks & 8.883\%\\
-\hline
-sessions with visits but not valid visits & 0.000\%\\
-\hline
-sessions with valid clicks that couldn't be matched with valid visits & 4.668\%\\
-\hline
-sessions with valid visits that couldn't be matched with valid clicks & 2.752\%\\
-\hline
+
 \end{tabular}
 \end{table}
 
