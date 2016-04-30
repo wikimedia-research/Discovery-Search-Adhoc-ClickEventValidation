@@ -72,7 +72,7 @@ click_visits %>%
             `sessions with valid visits that couldn't be matched with valid clicks` = sum(valid_clicks > 0 & valid_visits > 0 & `visits not accounted for` > 0)/n()) %>%
   tidyr::gather(" ", `proportion of sessions`) %>%
   mutate(`proportion of sessions` = sprintf("%.3f%%", 100*`proportion of sessions`)) %>%
-  knitr::kable(align = c("l", "r"), format = "markdown") %>%
+  # knitr::kable(align = c("l", "r"), format = "markdown") %>%
   knitr::kable(align = c("l", "r"), format = "latex", caption = "...")
 
 p <- click_visits %>%
@@ -114,6 +114,20 @@ ctrs <- click_visits %>%
   select(-platform) %>%
   tidyr::spread(type, ctr) %>%
   select(-date)
+
+click_visits %>%
+  keep_where((valid_clicks == 0 & valid_visits == 0) | (`clicks not accounted for` == 0 & `visits not accounted for` == 0)) %>%
+  summarize(`total sessions` = n(),
+            `abandoned sessions` = sum(valid_clicks == 0),
+            `clickthrough'd sessions` = sum(matches > 0),
+            `clickthrough rate (via click-visit matching)` = mean(matches > 0)) %>%
+  select(`clickthrough rate (via click-visit matching)`) %>%
+  tidyr::gather(type, ctr) %>%
+  mutate(platform = "Desktop") %>%
+  dplyr::bind_rows(ctr_overall, ctr_overall_extra) %>%
+  select(-platform) %>%
+  mutate(ctr = 100*ctr) %>%
+  knitr::kable(format = "latex", caption = "...")
 
 png("figures/ctr_matrix_2.png", width = 18, height = 10, res = 150, units = "in", pointsize = 14)
 pairs(ctrs, pch = 16)

@@ -43,7 +43,7 @@ q(ask = "no")
 dir.create("data")
 system("scp stat2:/home/bearloga/satisfaction_click_events_new.rds data/")
 
-events_new <- data.table::as.data.table(readr::read_rds("data/satisfaction_click_events.rds"))
+events_new <- data.table::as.data.table(readr::read_rds("data/satisfaction_click_events_new.rds"))
 # events <- events[events$date > "2016-04-01" & events$date <= "2016-04-24",,]
 # Let's make sure we're only using sessions that had at least one SERP
 #   (sessions with clicks but not SERPs are invalid)
@@ -82,6 +82,7 @@ ctr_daily_extra_new <- events_new %>%
   summarize(`clickthrough rate (via click, SERP-wise)` = mean(clickthrough)) %>%
   tidyr::gather(type, ctr, -date) %>%
   mutate(platform = "Desktop")
+readr::write_rds(dplyr::bind_rows(ctr_daily_new, ctr_daily_extra_new), "data/ctr_daily_new.rds")
 
 click_visits_new <- events_new %>%
   # head(1000) %>% # for prototyping
@@ -121,3 +122,4 @@ click_visits_new <- events_new %>%
   }, .collate = "rows") %>%
   mutate(`clicks not accounted for` = valid_clicks - matches,
          `visits not accounted for` = valid_visits - matches)
+readr::write_rds(click_visits, "data/click_visits_new.rds")
