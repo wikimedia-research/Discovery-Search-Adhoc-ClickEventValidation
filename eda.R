@@ -28,12 +28,13 @@ dash_daily <- dash_data %>%
   mutate(type = ifelse(platform == "Mobile Web", paste(type, "(via Schema:MobileWebSearch)"), type)) %>%
   mutate(type = ifelse(platform %in% c("Android", "iOS"), paste(type, "(via Schema:MobileWikiAppSearch)"), type))
 
-p <- ggplot(data = dplyr::bind_rows(ctr_daily, ctr_daily_extra,
-                                    keep_where(dash_daily, platform != "Desktop")),
+ctr_daily <- readr::read_rds("data/ctr_daily.rds")
+
+p <- ggplot(data = dplyr::bind_rows(ctr_daily, keep_where(dash_daily, platform != "Desktop")),
             aes(x = date, y = ctr, color = paste(type, "on", platform))) +
-  geom_hline(data = dplyr::bind_rows(ctr_overall, ctr_overall_extra,
-                                     keep_where(dash_overall, platform != "Desktop")),
-             aes(yintercept = ctr, color = paste(type, "on", platform)), linetype = "dashed") +
+  # geom_hline(data = dplyr::bind_rows(ctr_overall, ctr_overall_extra,
+  #                                    keep_where(dash_overall, platform != "Desktop")),
+             # aes(yintercept = ctr, color = paste(type, "on", platform)), linetype = "dashed") +
   geom_line(size = 1.5) + geom_point(size = 2) +
   scale_x_datetime(date_breaks = "1 week", date_labels = "%a (%d %b)") +
   scale_y_continuous("Clickthrough rate", labels = scales::percent_format()) +
@@ -62,14 +63,20 @@ click_visits %>%
   summarize(`sessions with valid clicks only` = sum(valid_clicks > 0)/n(),
             `sessions with valid visits only` = sum(valid_visits > 0)/n(),
             `sessions with valid clicks AND visits` = sum(valid_clicks > 0 & valid_visits > 0)/n(),
-            `sessions with more valid clicks than valid visits` = sum(valid_clicks > valid_visits)/n(),
-            `sessions with more valid visits than valid clicks` = sum(valid_visits > valid_clicks)/n(),
+            `sessions with more valid clicks than valid visits` = sum(valid_clicks > 0 & valid_visits > 0 & valid_clicks > valid_visits)/n(),
+            `sessions with more valid visits than valid clicks` = sum(valid_clicks > 0 & valid_visits > 0 & valid_visits > valid_clicks)/n(),
+            `sessions with more valid clicks than valid visits (2)` = sum(valid_clicks > 0 & valid_visits > 0 & valid_clicks > valid_visits)/sum(valid_clicks > 0 & valid_visits > 0),
+            `sessions with more valid visits than valid clicks (2)` = sum(valid_clicks > 0 & valid_visits > 0 & valid_visits > valid_clicks)/sum(valid_clicks > 0 & valid_visits > 0),
             `sessions with valid clicks AND visits, AND clicks match visits 100%` = sum(valid_clicks > 0 & valid_visits > 0 & `clicks not accounted for` == 0 & `visits not accounted for` == 0)/n(),
+            `sessions with valid clicks AND visits, AND clicks match visits 100% (2)` = sum(valid_clicks > 0 & valid_visits > 0 & `clicks not accounted for` == 0 & `visits not accounted for` == 0)/sum(valid_clicks > 0 & valid_visits > 0),
             `sessions with valid clicks AND visits, AND clicks don't match visits at all` = sum(valid_clicks > 0 & valid_visits > 0 & matches == 0)/n(),
+            `sessions with valid clicks AND visits, AND clicks don't match visits at all (2)` = sum(valid_clicks > 0 & valid_visits > 0 & matches == 0)/sum(valid_clicks > 0 & valid_visits > 0),
             `sessions with clicks but not valid clicks` = sum(clicks > 0 & valid_clicks == 0)/n(),
             `sessions with visits but not valid visits` = sum(visits > 0 & valid_visits == 0)/n(),
             `sessions with valid clicks that couldn't be matched with valid visits` = sum(valid_clicks > 0 & valid_visits > 0 & `clicks not accounted for` > 0)/n(),
-            `sessions with valid visits that couldn't be matched with valid clicks` = sum(valid_clicks > 0 & valid_visits > 0 & `visits not accounted for` > 0)/n()) %>%
+            `sessions with valid visits that couldn't be matched with valid clicks` = sum(valid_clicks > 0 & valid_visits > 0 & `visits not accounted for` > 0)/n(),
+            `sessions with valid clicks that couldn't be matched with valid visits (2)` = sum(valid_clicks > 0 & valid_visits > 0 & `clicks not accounted for` > 0)/sum(valid_clicks > 0 & valid_visits > 0),
+            `sessions with valid visits that couldn't be matched with valid clicks (2)` = sum(valid_clicks > 0 & valid_visits > 0 & `visits not accounted for` > 0)/sum(valid_clicks > 0 & valid_visits > 0)) %>%
   tidyr::gather(" ", `proportion of sessions`) %>%
   mutate(`proportion of sessions` = sprintf("%.3f%%", 100*`proportion of sessions`)) %>%
   # knitr::kable(align = c("l", "r"), format = "markdown") %>%
@@ -85,7 +92,7 @@ p <- click_visits %>%
   select(c(date, `clickthrough rate (via click-visit matching)`)) %>%
   tidyr::gather(type, ctr, -date) %>%
   mutate(platform = "Desktop") %>%
-  dplyr::bind_rows(ctr_daily, ctr_daily_extra) %>%
+  dplyr::bind_rows(ctr_daily) %>%
   ggplot(aes(x = date, y = ctr, color = paste(type, "on", platform))) +
   geom_line(size = 1.5) + geom_point(size = 2) +
   scale_x_datetime(date_breaks = "1 week", date_labels = "%a (%d %b)") +
@@ -93,7 +100,7 @@ p <- click_visits %>%
   labs(title = "Proportions of sessions or searches where user clicked on a result") +
   ggthemes::theme_tufte(base_family = "Gill Sans", base_size = 12) +
   theme(legend.position = "bottom", panel.grid = element_line(color = "black", size = 0.1)) +
-  scale_color_manual(values = RColorBrewer::brewer.pal(4, "Set1")[c(1, 3, 2, 4)],
+  scale_color_manual(values = c("#7fcdbb", RColorBrewer::brewer.pal(7, "Set1")[c(1, 2, 7)]),
                      guide = guide_legend(title = "Method & Platform", nrow = 2))
 print(p)
 ggsave("daily_ctr_2.png", p, path = "figures", width = 10, height = 6, dpi = 150)
@@ -109,7 +116,7 @@ ctrs <- click_visits %>%
   select(c(date, `clickthrough rate (via click-visit matching)`)) %>%
   tidyr::gather(type, ctr, -date) %>%
   mutate(platform = "Desktop") %>%
-  dplyr::bind_rows(ctr_daily, ctr_daily_extra) %>%
+  dplyr::bind_rows(ctr_daily) %>%
   mutate(ctr = 100*ctr, type = paste(type, "on", platform)) %>%
   select(-platform) %>%
   tidyr::spread(type, ctr) %>%
@@ -129,8 +136,17 @@ click_visits %>%
   mutate(ctr = 100*ctr) %>%
   knitr::kable(format = "latex", caption = "...")
 
-png("figures/ctr_matrix_2.png", width = 18, height = 10, res = 150, units = "in", pointsize = 14)
-pairs(ctrs, pch = 16)
+foo <- function(x, y, ...) {
+  fit <- lm(y ~ x)
+  xx <- seq(min(x), max(x), length.out = 1000)
+  predicted <- predict(fit, newdata = data.frame(x = xx), interval = "confidence", level = 0.95)
+  # abline(a = 0, b = 1, lty = "dashed", ...)
+  polygon(c(xx, rev(xx)), c(predicted[, 'upr'], rev(predicted[, 'lwr'])), col = "gray80", border = NA)
+  abline(fit, lwd = 1)
+  points(x, y, ...)
+}
+png("figures/ctr_matrix_2.png", width = 14, height = 8, res = 300, units = "in", pointsize = 16)
+pairs(ctrs, pch = 16, upper.panel = foo)
 dev.off()
 
 # A stats test of Granger causality (whether x can be used to forecast y)

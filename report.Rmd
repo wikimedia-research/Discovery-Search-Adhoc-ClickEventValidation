@@ -3,7 +3,8 @@ title: "Clicks and Page Visits in TestSearchSatisfaction2 Schema"
 author:
 - Mikhail Popov (Analysis & Report)
 - Erik Bernhardson (Engineering)
-date: "April 29, 2016"
+- Trey Jones (Review)
+date: "May 9, 2016"
 output:
   pdf_document:
     fig_caption: yes
@@ -26,7 +27,7 @@ The original goal of this analysis was to validate the click events against the 
 Without a reliable basis to compare against, we decided to try matching the click events to the visitPage events by looking at the results position field. 9\% of the sessions had click events and visitPage events that fully matched, and we used those together with sessions that had 0 click events and 0 visitPage events to get a CTR estimate. We found that the clickthrough rate estimated via the matching method resembled the naive CTR defined as "did the user have a valid click at any point in their session." We suspect we can use the naive CTR to run the TextCat A/B test.
 \end{abstract}
 
-As we move forward with [TextCat](http://odur.let.rug.nl/~vannoord/TextCat/) for detecting the language of users' search queries, we want to be able to access its success (or failure) with providing users with results from Wikipedias in languages other than the one they are searching on (see [TextCat A/B test](https://phabricator.wikimedia.org/T121542)). The challenge with this is that the Event Logging (EL) system as it currently exists on Wikimedia Foundation's projects was not designed nor built with inter-wiki support in mind.
+As we move forward with [TextCat](https://www.mediawiki.org/wiki/TextCat) for detecting the language of users' search queries, we want to be able to access its success (or failure) with providing users with results from Wikipedias in languages other than the one they are searching on (see [TextCat A/B test](https://phabricator.wikimedia.org/T121542)). The challenge with this is that the Event Logging (EL) system as it currently exists on Wikimedia Foundation's projects was not designed nor built with inter-wiki support in mind.
 
 Our current method of estimating the clickthrough rate uses the *visitPage* events sent by the user's browser when they have opened one of the search results and the page has loaded, but it only works within the same wiki and would not work if they opened a result that was on a different wiki. To that end, we implemented the *click* events in [our schema](https://meta.wikimedia.org/wiki/Schema:TestSearchSatisfaction2) as a way to capture clickthroughs from the search engine results page (SERP) directly, so that we could have a sense of users' engagement with the search results where we cannot track their page visits. In this report we investigate the validity of the *click* events for calculating the clickthrough rate so that we can possibly use it to assess the impact of TextCat language detection on the quality as well as the quantity of search results we return to the users.
 
@@ -50,35 +51,31 @@ Throughout this report, *sessions* actually means *sessions with nonzero result 
 
 \begin{table}[!h]
 \sffamily
-\caption{Clicks and page visits in sessions. A valid click and a valid visit are click and visitPage events that had a result position recorded, indicating which result in the list of the returned results they clicked on.}
+\caption{Clicks and page visits in sessions. A ``\emph{valid click}" refers to \textbf{click} event that had a \textbf{result position} recorded (indicating which result in the list of the returned results they clicked on), and likewise for ``\emph{valid visit}"s which refer to \textbf{visitPage} events.}
 \centering
 \renewcommand{\arraystretch}{1.6}% for the vertical padding
-\begin{tabular}[t]{l|r}
+\begin{tabular}[t]{l|rl}
 \hline
- ~ & \textbf{Proportion of sessions}\\
+ ~ & \textbf{Sessions}\\
 \hline\hline
-sessions with valid clicks only & 89.127\%\\
+sessions with some valid clicks & 89.127\% &\\
 \hline
-sessions with valid visits only & 16.817\%\\
+sessions with some valid visits& 16.817\% &\\
 \hline
-sessions with valid clicks AND visits & 14.237\%\\
+sessions with some valid clicks AND some valid visits & 14.237\% &\\
+\hline\hline
+sessions with more valid clicks than valid visits & 3.378\% & (23.730\% of 14.237\%)\\
 \hline
-sessions with more valid clicks than valid visits & 78.269\%\\
-\hline
-sessions with more valid visits than valid clicks & 3.441\%\\
-\hline
+sessions with more valid visits than valid clicks & 0.862\% & (6.052\% of 14.237\%)\\
+\hline\hline
 \rowcolor{LightYellow}
-sessions with valid clicks AND visits, AND clicks match visits 100\% & 8.995\%\\
+sessions with valid clicks AND valid visits, AND clicks match visits 100\% & 8.995\% & (63.183\% of 14.237\%)\\
 \hline
-sessions with valid clicks AND visits, AND clicks don't match visits at all & 0.743\%\\
+sessions with valid clicks AND valid visits, BUT clicks don't match visits at all & 0.743\% & (5.216\% of 14.237\%)\\
 \hline
-sessions with clicks but not valid clicks & 8.986\%\\
+sessions with valid clicks that couldn't be matched with valid visits & 4.538\% & (31.878\% of 14.237\%)\\
 \hline
-sessions with visits but not valid visits & 0.000\%\\
-\hline
-sessions with valid clicks that couldn't be matched with valid visits & 4.538\%\\
-\hline
-sessions with valid visits that couldn't be matched with valid clicks & 2.711\%\\
+sessions with valid visits that couldn't be matched with valid clicks & 2.711\% & (19.040\% of 14.237\%)\\
 \hline
 \end{tabular}
 \end{table}
@@ -88,25 +85,27 @@ sessions with valid visits that couldn't be matched with valid clicks & 2.711\%\
 \caption{Overall clickthrough rate, estimated with different methods.}
 \centering
 \renewcommand{\arraystretch}{2.0}% for the vertical padding
-\begin{tabular}[t]{l|rl}
+\begin{tabular}[t]{l|r}
 \hline
-\textbf{Method} & \textbf{Clickthrough Rate (\%)} & \\
+\textbf{Method} & \textbf{Clickthrough Rate (\%)} \\
 \hline\hline
-via click-visit matching & 52.031 & = 52.575 $\times$ 0.9897\\
+via click-visit matching & 52.031\\
 \hline
-via visitPage, session-wise & 9.979 &\\
+via visitPage, session-wise & 9.979\\
 \hline
-via click, session-wise & 52.575 & \\
+via click, session-wise & 52.575\\
 \hline
-via click, SERP-wise & 38.571 & \\
+via click, SERP-wise & 38.571\\
 \hline
 \end{tabular}
 \end{table}
 
 \newpage
 
-We were intrigued by the idea of sessions where the *click* events perfectly matched the *visitPage* events, rather than sessions where there were more *click* events than *visitPage* events (meaning the user clicked on a result but then closed the new tab before the page even loaded). So we narrowed our gaze at sessions that had either 0 clicks/visits (abandoned searches) or 100% matched clicks and visits. We suspect this may be a more accurate way to estimate clickthrough rate, albeit impossible if *visitPage* events are not available, such as in the case of the TextCat A/B test. Surprisingly, the resulting clickthrough rate is really close to the clickthrough rate when looking at *click* events per-session!
+We were intrigued by the idea of sessions where the *click* events perfectly matched the *visitPage* events, rather than sessions where there were more *click* events than *visitPage* events (meaning the user clicked on a result but then closed the new tab before the page even loaded). So we narrowed our gaze at sessions that had either 0 clicks/visits (abandoned searches) or 100% matched clicks and visits. We suspect this may be a more accurate way to estimate clickthrough rate, albeit impossible if *visitPage* events are not available, such as in the case of the TextCat A/B test. Surprisingly, the resulting clickthrough rate is really close to the clickthrough rate when looking at *click* events per-session in Figure 2!
 
-We also looked at the correlation between the two time series and did not see evidence of a strong, positive linear relationship. (Two identical time series would have a perfect positive linear relationship.) We also performed the [Granger causality](https://en.wikipedia.org/wiki/Granger_causality) test to see if the clickthrough rate we will be able to estimate can be used to reliably forecast the clickthrough rate that will not be able to estimate (due to absence of *visitPage* events) and found that we cannot. So we cannot **reliably** use one estimated clickthrough rate to estimate another.
+![We also looked at the correlation between the two time series and did not see evidence of a strong, positive linear relationship between CTR-via-matching (Row 1) and CTR-via-session-wise-click (Column 3), and instead saw the clickthrough rates scattered too much. Two identical time series would have a perfect positive (1:1) linear relationship.](figures/ctr_matrix_2.png)
 
-We suspect that in the absence of *visitPage* events, we can use a combination of the two other, *click*-reliant clickthrough rates (one calculated on a per-session basis, the other on a per-SERP basis) to estimate the clickthrough rate as it would have looked if we had *visitPage* events available to match with *click* events. **Alternatively** -- and this is the simpler option, albeit a less accurate one as mentioned above -- we can use just the overall (rather than daily) session-wise clickthrough rate as a very rough proxy/approximation for the more accurate, but non-observable overall clickthrough rate, either as it is or by multiplying it by some constant $k$ (see Table 2).
+We performed the [Granger causality](https://en.wikipedia.org/wiki/Granger_causality) test to see if the clickthrough rate we will be able to estimate can be used to reliably forecast the clickthrough rate that will not be able to estimate (due to absence of *visitPage* events). Since the Granger causality test does not test zero-lag (immediate) causality, we shifted the time series so the CTR-via-matching is on a 1 day delay from CTR-via-session-wise-click, so correlation between the two would translate to forecastability. We found that we cannot use the latter to forecast the former. So we cannot **reliably** use one estimated clickthrough rate to estimate another.
+
+We suspect that in the absence of *visitPage* events, we can use a combination of the two other, *click*-reliant clickthrough rates (one calculated on a per-session basis, the other on a per-SERP basis) to estimate the clickthrough rate as it would have looked if we had *visitPage* events available to match with *click* events. **Alternatively** -- and this is the simpler option, albeit a less accurate one as mentioned above -- we can use just the overall (rather than daily) session-wise clickthrough rate (see Table 2) as a very rough proxy/approximation for the more accurate, but non-observable overall clickthrough rate, either as it is or by multiplying it by some constant.
