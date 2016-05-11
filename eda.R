@@ -5,6 +5,10 @@ library(cowplot)
 library(GGally)
 library(purrr)
 
+colorblind_friendly_colors <- c("#D55E00", "#CC79A7", "#E69F00", "#56B4E9", "#2B9F78", "#0072B2", "#F0E442")
+# ^ from the set of colors unambiguous to color vision deficients
+# source: http://www.archimedes-lab.org/colorblindnesstest.html
+
 dir.create("figures")
 
 dash_data <- readr::read_rds("data/dash_data.rds")
@@ -41,7 +45,8 @@ p <- ggplot(data = dplyr::bind_rows(ctr_daily, keep_where(dash_daily, platform !
   labs(title = "Proportions of sessions or searches where user clicked on a result") +
   ggthemes::theme_tufte(base_family = "Gill Sans", base_size = 12) +
   theme(legend.position = "bottom", panel.grid = element_line(color = "black", size = 0.1)) +
-  scale_color_manual(values = RColorBrewer::brewer.pal(7, "Set1")[-6],
+  scale_color_manual(values = colorblind_friendly_colors,
+                     # values = RColorBrewer::brewer.pal(7, "Set1")[-6],
                      guide = guide_legend(title = "Method & Platform", nrow = 3))
 print(p)
 ggsave("daily_ctr.png", p, path = "figures", width = 10, height = 6, dpi = 150)
@@ -100,7 +105,7 @@ p <- click_visits %>%
   labs(title = "Proportions of sessions or searches where user clicked on a result") +
   ggthemes::theme_tufte(base_family = "Gill Sans", base_size = 12) +
   theme(legend.position = "bottom", panel.grid = element_line(color = "black", size = 0.1)) +
-  scale_color_manual(values = c("#7fcdbb", RColorBrewer::brewer.pal(7, "Set1")[c(1, 2, 7)]),
+  scale_color_manual(values = c("#000000", colorblind_friendly_colors[c(1, 2, 6)]),
                      guide = guide_legend(title = "Method & Platform", nrow = 2))
 print(p)
 ggsave("daily_ctr_2.png", p, path = "figures", width = 10, height = 6, dpi = 150)
